@@ -5,6 +5,8 @@ date: "July 10, 2016"
 output: html_document
 ---
 
+# Prediction project for the Practical Machine Learning course
+
 One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. The goal of your project is to predict the manner in which they did the exercise. 
 
 The "classe" variable contains 5 levels: A,B,C,D,E. You may use any of the other variables to predict with. You should create a report describing 
@@ -14,14 +16,14 @@ The "classe" variable contains 5 levels: A,B,C,D,E. You may use any of the other
 4) and why you made the choices you did. 
 5) you will also use your prediction model to predict 20 different test cases.
 
-Load packages
+## Load packages
 
 ```{r}
 suppressPackageStartupMessages(library(caret))
 suppressPackageStartupMessages(library(corrplot))
 ```
 
-Now read and clean data 
+Now reading the training and testing data, cleaning both datasets from un-needed variables: the project requires to read only data from belt/arm/dumbell sensors. Also removing columns with empty values, and Not Assigned (NA) values.
 
 ```{r}
 training <- read.csv("pml-training.csv")
@@ -34,9 +36,9 @@ training = training[, cols.without.na]
 testing = testing[, cols.without.na]
 ```
 
-Preprocessing
+## Preprocessing
 
-Trasnfor "classe" in a numeric columns. Check zero variance predictors. 
+Trasnform "classe" in a numeric column. Check zero variance predictors. 
 
 ```{r}
 num.class = length(levels(training$classe))
@@ -46,7 +48,7 @@ zero.var = nearZeroVar(training, saveMetrics=TRUE)
 zero.var
 ```
 
-create a validation sample
+Now create a cross-validation sample that will be used to estimate the out-of-sample error
 
 ```{r}
 inTrain <- createDataPartition(training$classe, p = 0.6, list = FALSE)
@@ -54,7 +56,9 @@ training <- training[inTrain, ]
 validate <- training[-inTrain,]
 ```
 
-now create a model training it on the 60% of the dataset provided in the project, using boosted decision trees.
+## A Boosted Decision Tree model
+
+Now create a model training it on the 60% of the dataset provided in the project, using boosted decision trees.
 Checking also the importance of the predictors.
 
 ```{r}
@@ -64,38 +68,31 @@ plot(boostFit, ylim = c(0.9, 1))
 imp <- varImp(boostFit)$importance
 imp$max <- apply(imp, 1, max)
 imp <- imp[order(imp$max, decreasing = T), ]
+imp
 ```
 
+## Out of sample model error
+
 Now estimate the out of sample error
+
 ```{r}
 # predict on testValidateData
-predictions <- predict(modelFit.rf, testValidateData)
-# length of the predictions
-length(predictions)
+predictions_val <- predict(boostFit, validate)
 # true accuracy of the predicted model
-outOfSampleError.accuracy <- sum(predictions == testValidateData$classe)/length(predictions)
-
-outOfSampleError.accuracy
-
+outOfSampleError.accuracy <- sum(predictions_val == validate$classe)/length(predictions_val)
 # out of sample error and percentage of out of sample error
 outOfSampleError <- 1 - outOfSampleError.accuracy
 outOfSampleError
 e <- outOfSampleError * 100
-paste0("Out of sample error estimation: ", round(e, digits = 2), "%")
 ```
 
+the out-of-sample error computed on the cross-validation sample is `r round(e, digits = 2)`%.
 
-prediction <- as.character(predict(boostFit, testing))
-```
+## The prediction
+
+We can now compute the predictions to be inpute as the final outcome of this project
 
 ```{r}
-# write prediction files
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("./prediction/problem_id_", i, ".txt")
-    write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, col.names = FALSE)
-  }
-}
-pml_write_files(prediction)
+prediction <- as.character(predict(boostFit, testing))
+prediction
 ```
