@@ -86,7 +86,7 @@ outOfSampleError
 e <- outOfSampleError * 100
 ```
 
-the out-of-sample error computed on the cross-validation sample is `r round(e, digits = 2)`%.
+the out-of-sample error computed on the cross-validation sample is 5%.
 
 ## The prediction
 
